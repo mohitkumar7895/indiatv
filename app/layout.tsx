@@ -56,10 +56,13 @@ export async function generateMetadata(): Promise<Metadata> {
         : undefined,
       verification: settings["seo.gsc"]
         ? { google: settings["seo.gsc"] }
-        : undefined,
+        : { google: "K1NgkgDSJgEpwou09c-dnC7BvXX6xwOs1K6397sdYO4" },
     };
   } catch {
-    return { title: "TV Repair Service" };
+    return {
+      title: "TV Repair Service",
+      verification: { google: "K1NgkgDSJgEpwou09c-dnC7BvXX6xwOs1K6397sdYO4" },
+    };
   }
 }
 
@@ -80,6 +83,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang="en" className={`${display.variable} ${body.variable} h-full antialiased`} data-scroll-behavior="smooth">
       <head>
+        <meta name="google-site-verification" content="K1NgkgDSJgEpwou09c-dnC7BvXX6xwOs1K6397sdYO4" />
         {icon ? (
           <>
             <link rel="icon" href={icon} />
