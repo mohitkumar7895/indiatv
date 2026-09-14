@@ -16,9 +16,9 @@ export function slugify(value: string): string {
 }
 
 export function siteUrl(path = ""): string {
-  let base = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").trim();
+  let base = (process.env.NEXT_PUBLIC_SITE_URL || "https://indialedtvrepair.com").trim();
   if (base && !/^https?:\/\//i.test(base)) base = `https://${base}`;
-  base = base.replace(/\/$/, "") || "http://localhost:3000";
+  base = base.replace(/\/$/, "") || "https://indialedtvrepair.com";
   if (!path) return base;
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
