@@ -43,7 +43,7 @@ export function AdminShell({
       <aside className="fixed inset-y-0 left-0 hidden w-64 overflow-y-auto bg-navy text-white lg:block">
         <div className="px-5 py-6">
           <p className="text-xs uppercase tracking-[0.2em] text-white/50">Website editor</p>
-          <p className="mt-1 font-display text-xl">India LED TV Repair Center</p>
+          <p className="mt-1 font-display text-xl">India LED TV Repair</p>
           <p className="mt-2 text-xs leading-5 text-white/55">Change a field, click Save, then check View site.</p>
         </div>
         <nav className="space-y-0.5 px-3 pb-10">

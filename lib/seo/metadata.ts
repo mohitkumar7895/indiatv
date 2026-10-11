@@ -20,7 +20,7 @@ export function buildMetadata(opts: {
   image?: string | null;
 }): Metadata {
   const { seo, fallbackTitle, fallbackDescription, path, settings, image } = opts;
-  const title = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || "TV Repair";
+  const title = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || "India LED TV Repair";
   const description =
     seo?.meta_description ||
     fallbackDescription ||
@@ -49,7 +49,7 @@ export function buildMetadata(opts: {
       title: ogTitle,
       description: ogDescription,
       url: canonical,
-      siteName: settings["business.name"] || "TV Repair",
+      siteName: settings["business.name"] || "India LED TV Repair",
       images: ogImage ? [{ url: ogImage }] : undefined,
     },
     twitter: {

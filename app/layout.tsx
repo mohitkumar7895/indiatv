@@ -43,8 +43,8 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       metadataBase: new URL(siteUrl()),
       title: {
-        default: settings["seo.default_title"] || settings["business.name"] || "TV Repair",
-        template: `%s | ${settings["business.name"] || "TV Repair"}`,
+        default: settings["seo.default_title"] || settings["business.name"] || "India LED TV Repair",
+        template: `%s | ${settings["business.name"] || "India LED TV Repair"}`,
       },
       description: settings["seo.default_description"] || "",
       icons: icon
@@ -60,7 +60,7 @@ export async function generateMetadata(): Promise<Metadata> {
     };
   } catch {
     return {
-      title: "TV Repair Service",
+      title: "India LED TV Repair",
       verification: { google: "K1NgkgDSJgEpwou09c-dnC7BvXX6xwOs1K6397sdYO4" },
     };
   }

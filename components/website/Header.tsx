@@ -19,7 +19,7 @@ export function Header({
   const [open, setOpen] = useState(false);
   const openBooking = useUiStore((s) => s.openBooking);
   const phone = settings["business.phone"] || "";
-  const name = settings["business.name"] || "India LED TV Repair Center";
+  const name = settings["business.name"] || "India LED TV Repair";
   const hours = settings["business.working_hours"] || "";
 
   return (
