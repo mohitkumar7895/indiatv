@@ -15,6 +15,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/admin" || pathname === "/admin/") {
+    const token = request.cookies.get(SESSION_COOKIE)?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/admin/login?next=/admin/dashboard", request.url));
+    }
+    return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+  }
+
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   if (!token) {
     const login = new URL("/admin/login", request.url);

@@ -20,7 +20,8 @@ export function LoginForm() {
     setError("");
     try {
       await apiPost("/auth/login", { email, password });
-      router.push(params.get("next") || "/admin/dashboard");
+      const next = params.get("next");
+      router.push(next && next !== "/admin" && next !== "/admin/" ? next : "/admin/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
