@@ -20,12 +20,12 @@ export function buildMetadata(opts: {
   image?: string | null;
 }): Metadata {
   const { seo, fallbackTitle, fallbackDescription, path, settings, image } = opts;
-  const brand = settings["business.name"] || "India LED TV Repair";
-  const rawTitle = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || brand;
+  const brand = (settings["business.name"] || "India LED TV Repair").replace(/Helix TV Care/gi, "India LED TV Repair");
+  const rawTitle = (seo?.seo_title || fallbackTitle || settings["seo.default_title"] || brand).replace(/Helix TV Care/gi, "India LED TV Repair");
   const isHome = path === "/" || path === "";
-  const title = isHome || rawTitle.toLowerCase().includes(brand.toLowerCase())
-    ? { absolute: rawTitle }
-    : rawTitle;
+  const title = isHome
+    ? { absolute: "India LED TV Repair" }
+    : (rawTitle.toLowerCase().includes(brand.toLowerCase()) ? { absolute: rawTitle } : rawTitle);
   const description =
     seo?.meta_description ||
     fallbackDescription ||

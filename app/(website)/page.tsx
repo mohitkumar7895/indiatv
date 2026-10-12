@@ -14,15 +14,10 @@ export const revalidate = 60;
 export async function generateMetadata(): Promise<Metadata> {
   try {
     const [page, site] = await Promise.all([getHomepage(), getSiteContext()]);
-    if (!page) return { title: { absolute: "India LED TV Repair" } };
-    const seo = await getSeo("homepage", page.id);
-    return buildMetadata({
-      seo,
-      fallbackTitle: "India LED TV Repair",
-      fallbackDescription: page.excerpt || "",
-      path: "/",
-      settings: site.settings,
-    });
+    return {
+      title: { absolute: "India LED TV Repair" },
+      description: page?.excerpt || "Professional LED, LCD, OLED, QLED and Smart TV repair at your doorstep across Delhi NCR.",
+    };
   } catch {
     return { title: { absolute: "India LED TV Repair" } };
   }

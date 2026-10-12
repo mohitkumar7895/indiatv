@@ -43,8 +43,8 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       metadataBase: new URL(siteUrl()),
       title: {
-        default: settings["seo.default_title"] || settings["business.name"] || "India LED TV Repair",
-        template: `%s | ${settings["business.name"] || "India LED TV Repair"}`,
+        default: "India LED TV Repair",
+        template: `%s | ${(settings["business.name"] || "India LED TV Repair").replace(/Helix TV Care/gi, "India LED TV Repair")}`,
       },
       description: settings["seo.default_description"] || "",
       icons: icon
