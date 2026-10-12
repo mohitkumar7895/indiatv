@@ -5,8 +5,10 @@ const bcrypt = require("bcryptjs");
 const { downloadAll, upsertMedia, localUrl, SERVICE_FILES } = require("./local-images");
 
 function loadEnv() {
-  const envPath = path.join(__dirname, "..", ".env");
-  if (!fs.existsSync(envPath)) return;
+  const envLocal = path.join(__dirname, "..", ".env.local");
+  const envDefault = path.join(__dirname, "..", ".env");
+  const envPath = fs.existsSync(envLocal) ? envLocal : (fs.existsSync(envDefault) ? envDefault : null);
+  if (!envPath) return;
   for (const line of fs.readFileSync(envPath, "utf8").split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
@@ -32,9 +34,14 @@ async function main() {
   const password = process.env.DB_PASSWORD || "";
   const database = process.env.DB_NAME || "tvrepair";
 
-  const root = await mysql.createConnection({ host, port, user, password, multipleStatements: true });
-  await root.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-  await root.end();
+  try {
+    const root = await mysql.createConnection({ host, port, user, password, multipleStatements: true });
+    await root.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    await root.end();
+  } catch (err) {
+    // If user lacks CREATE DATABASE privilege (e.g. Hostinger), database is already created in hPanel
+    console.log("[db:setup] CREATE DATABASE skipped or handled in control panel:", err.message || err);
+  }
 
   const schema = fs.readFileSync(path.join(__dirname, "schema.sql"), "utf8");
   const conn = await mysql.createConnection({ host, port, user, password, database, multipleStatements: true });

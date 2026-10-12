@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS password_resets;
 DROP TABLE IF EXISTS redirects;
 DROP TABLE IF EXISTS seo_metadata;
 DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS gallery_images;
 DROP TABLE IF EXISTS menu_items;
 DROP TABLE IF EXISTS menus;
 DROP TABLE IF EXISTS media;
@@ -337,3 +338,18 @@ CREATE TABLE password_resets (
   KEY idx_password_resets_user (user_id),
   CONSTRAINT fk_password_resets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE gallery_images (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  media_id INT UNSIGNED NOT NULL,
+  caption VARCHAR(255) NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  is_visible TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_gallery_images_media (media_id),
+  KEY idx_gallery_images_sort (sort_order),
+  CONSTRAINT fk_gallery_images_media FOREIGN KEY (media_id) REFERENCES media(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
