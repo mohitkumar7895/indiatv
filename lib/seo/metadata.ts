@@ -19,6 +19,7 @@ export function buildMetadata(opts: {
   settings: SettingsMap;
   image?: string | null;
 }): Metadata {
+  const { seo, fallbackTitle, fallbackDescription, path, settings, image } = opts;
   const brand = settings["business.name"] || "India LED TV Repair";
   const rawTitle = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || brand;
   const isHome = path === "/" || path === "";
