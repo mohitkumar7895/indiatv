@@ -23,7 +23,7 @@ export default async function GalleryPage() {
     JOIN media m ON g.media_id = m.id
     WHERE g.is_visible = 1
     ORDER BY g.sort_order ASC, g.id DESC
-  `);
+  `).catch(() => []);
 
   return (
     <>

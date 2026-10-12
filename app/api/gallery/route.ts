@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       FROM gallery_images g
       JOIN media m ON g.media_id = m.id
       ORDER BY g.sort_order ASC, g.id DESC
-    `);
+    `).catch(() => []);
     return jsonOk(images);
   } catch (error) {
     return handleApiError(error);
