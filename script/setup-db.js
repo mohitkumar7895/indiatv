@@ -174,7 +174,7 @@ async function main() {
         },
       },
     ],
-    { title: "Helix TV Care | Doorstep TV Repair in Delhi NCR", desc: "Expert LED, LCD, OLED and Smart TV repair at home. Same-day technicians across Noida, Delhi, Ghaziabad, Gurgaon and Faridabad.", kw: "tv repair noida", schema: "LocalBusiness" },
+    { title: "India LED TV Repair | Doorstep TV Repair in Delhi NCR", desc: "Expert LED, LCD, OLED and Smart TV repair at home. Same-day technicians across Noida, Delhi, Ghaziabad, Gurgaon and Faridabad.", kw: "tv repair noida", schema: "LocalBusiness" },
   );
 
   await addPage("About", "about", false, "About Helix TV Care", [
