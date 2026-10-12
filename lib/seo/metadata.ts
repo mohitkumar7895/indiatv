@@ -19,15 +19,19 @@ export function buildMetadata(opts: {
   settings: SettingsMap;
   image?: string | null;
 }): Metadata {
-  const { seo, fallbackTitle, fallbackDescription, path, settings, image } = opts;
-  const title = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || "India LED TV Repair";
+  const brand = settings["business.name"] || "India LED TV Repair";
+  const rawTitle = seo?.seo_title || fallbackTitle || settings["seo.default_title"] || brand;
+  const isHome = path === "/" || path === "";
+  const title = isHome || rawTitle.toLowerCase().includes(brand.toLowerCase())
+    ? { absolute: rawTitle }
+    : rawTitle;
   const description =
     seo?.meta_description ||
     fallbackDescription ||
     settings["seo.default_description"] ||
     "";
   const canonical = seo?.canonical_url || siteUrl(path);
-  const ogTitle = seo?.og_title || title;
+  const ogTitle = seo?.og_title || rawTitle;
   const ogDescription = seo?.og_description || description;
   const twitterTitle = seo?.twitter_title || ogTitle;
   const twitterDescription = seo?.twitter_description || ogDescription;
