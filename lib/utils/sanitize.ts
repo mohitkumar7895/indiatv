@@ -19,7 +19,7 @@ const ALLOWED_TAGS = new Set([
   "div",
 ]);
 
-const ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "target", "rel"]);
+const ALLOWED_ATTRS = new Set(["href", "src", "alt", "title", "target", "rel", "class", "id", "loading", "width", "height"]);
 
 export function sanitizeHtml(input: string): string {
   if (!input) return "";

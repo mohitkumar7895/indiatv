@@ -264,6 +264,8 @@ async function main() {
     "INSERT INTO blog_categories (name, slug, description) VALUES ('Repair Guides','repair-guides','How-to and diagnostic articles')",
   );
   const posts = [
+    ["Best LED TV Repair in Noida", "best-led-tv-repair-in-noida", "Are you looking for reliable Best LED TV repair in Noida? Professional doorstep repair assistance for power, display, sound, and Smart TV issues across Noida."],
+    ["LED TV Repair Near Me", "led-tv-repair-near-me", "How to quickly find certified, verified TV repair technicians near you for same-day home visits across Noida and Delhi NCR."],
     ["When a TV has sound but no picture", "tv-sound-no-picture", "Usually a backlight, T-con or panel issue — here is how we tell them apart."],
     ["Is OLED panel replacement worth it?", "oled-panel-replacement", "Honest guidance on cost versus a new set."],
     ["Smart TV software faults we see every week", "smart-tv-software-faults", "Boot loops, missing apps and Wi-Fi dropouts."],
