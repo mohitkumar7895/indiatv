@@ -1,4 +1,5 @@
 import { execute, parseJson, query, queryOne, transaction } from "@/lib/db/query";
+import { invalidateMemo, memoize } from "@/lib/cache";
 import { pagination } from "@/lib/utils/cn";
 import { NotFoundError } from "@/lib/utils/errors";
 import type { Page, PageSection, PageWithSections } from "@/models";
@@ -66,28 +67,32 @@ export async function getPageById(id: number): Promise<PageWithSections> {
 }
 
 export async function getPublishedPageBySlug(slug: string): Promise<PageWithSections | null> {
-  const page = await queryOne<Page>(
-    `${PAGE_SELECT} WHERE p.slug = ? AND p.status = 'published'`,
-    [slug],
-  );
-  if (!page) return null;
-  const sections = await query<PageSection>(
-    "SELECT * FROM page_sections WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC",
-    [page.id],
-  );
-  return { ...page, sections: sections.map(mapSection) };
+  return memoize(`pages:slug:${slug}`, 180, async () => {
+    const page = await queryOne<Page>(
+      `${PAGE_SELECT} WHERE p.slug = ? AND p.status = 'published'`,
+      [slug],
+    );
+    if (!page) return null;
+    const sections = await query<PageSection>(
+      "SELECT * FROM page_sections WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC",
+      [page.id],
+    );
+    return { ...page, sections: sections.map(mapSection) };
+  });
 }
 
 export async function getHomepage(): Promise<PageWithSections | null> {
-  const page = await queryOne<Page>(
-    `${PAGE_SELECT} WHERE p.is_homepage = 1 AND p.status = 'published' LIMIT 1`,
-  );
-  if (!page) return null;
-  const sections = await query<PageSection>(
-    "SELECT * FROM page_sections WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC",
-    [page.id],
-  );
-  return { ...page, sections: sections.map(mapSection) };
+  return memoize("pages:homepage", 180, async () => {
+    const page = await queryOne<Page>(
+      `${PAGE_SELECT} WHERE p.is_homepage = 1 AND p.status = 'published' LIMIT 1`,
+    );
+    if (!page) return null;
+    const sections = await query<PageSection>(
+      "SELECT * FROM page_sections WHERE page_id = ? AND is_visible = 1 ORDER BY sort_order ASC, id ASC",
+      [page.id],
+    );
+    return { ...page, sections: sections.map(mapSection) };
+  });
 }
 
 export async function savePage(input: {
@@ -204,6 +209,8 @@ export async function savePage(input: {
     return pageId!;
   });
 
+  invalidateMemo("pages");
+
   if (input.seo) {
     await upsertSeo(input.is_homepage ? "homepage" : "page", id, input.seo);
   }
@@ -214,6 +221,7 @@ export async function savePage(input: {
 export async function deletePage(id: number) {
   const page = await queryOne<Page>("SELECT * FROM pages WHERE id = ?", [id]);
   if (!page) throw new NotFoundError("Page not found");
+  invalidateMemo("pages");
   await execute("DELETE FROM pages WHERE id = ?", [id]);
 }
 

@@ -1,4 +1,5 @@
 import { execute, parseJson, query, queryOne, transaction } from "@/lib/db/query";
+import { invalidateMemo, memoize } from "@/lib/cache";
 import { pagination } from "@/lib/utils/cn";
 import { NotFoundError } from "@/lib/utils/errors";
 import type { Service, ServiceFaq, ServiceWithRelations } from "@/models";
@@ -56,8 +57,10 @@ export async function listServices(opts: {
 }
 
 export async function getPublishedServices() {
-  const { data } = await listServices({ status: "published", all: true, pageSize: 100 });
-  return data;
+  return memoize("services:published", 180, async () => {
+    const { data } = await listServices({ status: "published", all: true, pageSize: 100 });
+    return data;
+  });
 }
 
 export async function getServiceById(id: number): Promise<ServiceWithRelations> {
@@ -74,16 +77,18 @@ export async function getServiceById(id: number): Promise<ServiceWithRelations> 
 }
 
 export async function getServiceBySlug(slug: string, publishedOnly = true) {
-  const sql = publishedOnly
-    ? `SELECT s.*, m.url AS image_url FROM services s LEFT JOIN media m ON m.id = s.image_id WHERE s.slug = ? AND s.status = 'published'`
-    : `SELECT s.*, m.url AS image_url FROM services s LEFT JOIN media m ON m.id = s.image_id WHERE s.slug = ?`;
-  const row = await queryOne<Service>(sql, [slug]);
-  if (!row) return null;
-  const faqs = await query<ServiceFaq>(
-    "SELECT * FROM service_faqs WHERE service_id = ? ORDER BY sort_order ASC, id ASC",
-    [row.id],
-  );
-  return { ...mapService(row), faqs };
+  return memoize(`services:slug:${slug}:${publishedOnly}`, 180, async () => {
+    const sql = publishedOnly
+      ? `SELECT s.*, m.url AS image_url FROM services s LEFT JOIN media m ON m.id = s.image_id WHERE s.slug = ? AND s.status = 'published'`
+      : `SELECT s.*, m.url AS image_url FROM services s LEFT JOIN media m ON m.id = s.image_id WHERE s.slug = ?`;
+    const row = await queryOne<Service>(sql, [slug]);
+    if (!row) return null;
+    const faqs = await query<ServiceFaq>(
+      "SELECT * FROM service_faqs WHERE service_id = ? ORDER BY sort_order ASC, id ASC",
+      [row.id],
+    );
+    return { ...mapService(row), faqs };
+  });
 }
 
 export async function saveService(input: {
@@ -161,10 +166,13 @@ export async function saveService(input: {
     return serviceId!;
   });
 
+  invalidateMemo("services");
+
   if (input.seo) await upsertSeo("service", id, input.seo);
   return getServiceById(id);
 }
 
 export async function deleteService(id: number) {
+  invalidateMemo("services");
   await execute("DELETE FROM services WHERE id = ?", [id]);
 }

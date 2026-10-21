@@ -1,4 +1,5 @@
 import { execute, query, queryOne } from "@/lib/db/query";
+import { invalidateMemo, memoize } from "@/lib/cache";
 import { pagination } from "@/lib/utils/cn";
 import { NotFoundError } from "@/lib/utils/errors";
 import type { Faq, Testimonial, Lead, Media, Menu, MenuItem, User } from "@/models";
@@ -54,23 +55,27 @@ export async function listFaqs(opts: {
 }
 
 export async function getActiveFaqs(category?: string, pageId?: number) {
-  const filters = ["status = 'active'"];
-  const params: unknown[] = [];
-  if (category) {
-    filters.push("category = ?");
-    params.push(category);
-  }
-  if (pageId) {
-    filters.push("(page_id IS NULL OR page_id = ?)");
-    params.push(pageId);
-  }
-  return query<Faq>(
-    `SELECT * FROM faqs WHERE ${filters.join(" AND ")} ORDER BY sort_order ASC`,
-    params,
-  );
+  const cacheKey = `faqs:${category || ""}:${pageId || ""}`;
+  return memoize(cacheKey, 180, async () => {
+    const filters = ["status = 'active'"];
+    const params: unknown[] = [];
+    if (category) {
+      filters.push("category = ?");
+      params.push(category);
+    }
+    if (pageId) {
+      filters.push("(page_id IS NULL OR page_id = ?)");
+      params.push(pageId);
+    }
+    return query<Faq>(
+      `SELECT * FROM faqs WHERE ${filters.join(" AND ")} ORDER BY sort_order ASC`,
+      params,
+    );
+  });
 }
 
 export async function saveFaq(input: Partial<Faq> & { question: string; answer: string }) {
+  invalidateMemo("faqs");
   if (input.id) {
     await execute(
       "UPDATE faqs SET question=?, answer=?, page_id=?, category=?, sort_order=?, status=? WHERE id=?",
@@ -102,6 +107,7 @@ export async function saveFaq(input: Partial<Faq> & { question: string; answer: 
 }
 
 export async function deleteFaq(id: number) {
+  invalidateMemo("faqs");
   await execute("DELETE FROM faqs WHERE id = ?", [id]);
 }
 
@@ -113,38 +119,48 @@ export async function listTestimonials(opts: {
   featured?: boolean;
   all?: boolean;
 }) {
-  const { page, pageSize, offset } = pagination(opts.page, opts.pageSize);
-  const filters: string[] = [];
-  const params: unknown[] = [];
-  if (opts.q) {
-    filters.push("(customer_name LIKE ? OR review LIKE ? OR location LIKE ?)");
-    params.push(`%${opts.q}%`, `%${opts.q}%`, `%${opts.q}%`);
+  const isPublicCacheable = opts.status === "active" && !opts.q && !opts.featured;
+  const cacheKey = `testimonials:${opts.status || ""}:${opts.featured ? "1" : "0"}:${opts.all ? "all" : opts.page || 1}:${opts.pageSize || 20}`;
+
+  const queryFn = async () => {
+    const { page, pageSize, offset } = pagination(opts.page, opts.pageSize);
+    const filters: string[] = [];
+    const params: unknown[] = [];
+    if (opts.q) {
+      filters.push("(customer_name LIKE ? OR review LIKE ? OR location LIKE ?)");
+      params.push(`%${opts.q}%`, `%${opts.q}%`, `%${opts.q}%`);
+    }
+    if (opts.status) {
+      filters.push("t.status = ?");
+      params.push(opts.status);
+    }
+    if (opts.featured) filters.push("t.is_featured = 1");
+    const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+    const totalRow = await queryOne<{ count: number }>(
+      `SELECT COUNT(*) AS count FROM testimonials t ${where}`,
+      params,
+    );
+    const limitSql = opts.all ? "" : "LIMIT ? OFFSET ?";
+    const limitParams = opts.all ? [] : [pageSize, offset];
+    const data = await query<Testimonial>(
+      `SELECT t.*, m.url AS image_url FROM testimonials t
+       LEFT JOIN media m ON m.id = t.image_id
+       ${where} ORDER BY t.is_featured DESC, t.review_date DESC, t.id DESC ${limitSql}`,
+      [...params, ...limitParams],
+    );
+    return {
+      data,
+      total: totalRow?.count || 0,
+      page,
+      pageSize: opts.all ? data.length : pageSize,
+      totalPages: opts.all ? 1 : Math.ceil((totalRow?.count || 0) / pageSize),
+    } satisfies PaginatedResult<Testimonial>;
+  };
+
+  if (isPublicCacheable) {
+    return memoize(cacheKey, 180, queryFn);
   }
-  if (opts.status) {
-    filters.push("t.status = ?");
-    params.push(opts.status);
-  }
-  if (opts.featured) filters.push("t.is_featured = 1");
-  const where = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
-  const totalRow = await queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM testimonials t ${where}`,
-    params,
-  );
-  const limitSql = opts.all ? "" : "LIMIT ? OFFSET ?";
-  const limitParams = opts.all ? [] : [pageSize, offset];
-  const data = await query<Testimonial>(
-    `SELECT t.*, m.url AS image_url FROM testimonials t
-     LEFT JOIN media m ON m.id = t.image_id
-     ${where} ORDER BY t.is_featured DESC, t.review_date DESC, t.id DESC ${limitSql}`,
-    [...params, ...limitParams],
-  );
-  return {
-    data,
-    total: totalRow?.count || 0,
-    page,
-    pageSize: opts.all ? data.length : pageSize,
-    totalPages: opts.all ? 1 : Math.ceil((totalRow?.count || 0) / pageSize),
-  } satisfies PaginatedResult<Testimonial>;
+  return queryFn();
 }
 
 export async function saveTestimonial(input: {
@@ -158,6 +174,7 @@ export async function saveTestimonial(input: {
   is_featured?: boolean;
   status?: "active" | "inactive";
 }) {
+  invalidateMemo("testimonials");
   const values = [
     input.customer_name,
     input.rating,
@@ -184,6 +201,7 @@ export async function saveTestimonial(input: {
 }
 
 export async function deleteTestimonial(id: number) {
+  invalidateMemo("testimonials");
   await execute("DELETE FROM testimonials WHERE id = ?", [id]);
 }
 
@@ -367,13 +385,15 @@ export async function listMenus() {
 }
 
 export async function getMenuByLocation(location: string) {
-  const menu = await queryOne<Menu>("SELECT * FROM menus WHERE location = ?", [location]);
-  if (!menu) return null;
-  const items = await query<MenuItem>(
-    "SELECT * FROM menu_items WHERE menu_id = ? AND is_enabled = 1 ORDER BY sort_order ASC, id ASC",
-    [menu.id],
-  );
-  return { ...menu, items: nestItems(items) };
+  return memoize(`menu:${location}`, 180, async () => {
+    const menu = await queryOne<Menu>("SELECT * FROM menus WHERE location = ?", [location]);
+    if (!menu) return null;
+    const items = await query<MenuItem>(
+      "SELECT * FROM menu_items WHERE menu_id = ? AND is_enabled = 1 ORDER BY sort_order ASC, id ASC",
+      [menu.id],
+    );
+    return { ...menu, items: nestItems(items) };
+  });
 }
 
 function nestItems(items: MenuItem[]): MenuItem[] {
@@ -404,6 +424,7 @@ export async function saveMenu(input: {
     is_enabled?: boolean;
   }>;
 }) {
+  invalidateMemo("menu");
   let menuId = input.id;
   if (menuId) {
     await execute("UPDATE menus SET name=?, location=? WHERE id=?", [
@@ -448,6 +469,7 @@ export async function saveMenu(input: {
 }
 
 export async function deleteMenu(id: number) {
+  invalidateMemo("menu");
   await execute("DELETE FROM menus WHERE id = ?", [id]);
 }
 

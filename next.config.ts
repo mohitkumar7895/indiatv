@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["mysql2"],
+  compress: true,
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -11,7 +12,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     return {
-      beforeFiles: [
+      afterFiles: [
         { source: "/uploads/:path*", destination: "/api/media/file/:path*" },
       ],
     };

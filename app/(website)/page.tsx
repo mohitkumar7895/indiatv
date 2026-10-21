@@ -7,6 +7,7 @@ import { PageRenderer } from "@/components/website/PageRenderer";
 import { StatsSection } from "@/components/website/StatsSection";
 import { GallerySlider } from "@/components/website/GallerySlider";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { memoize } from "@/lib/cache";
 import { query } from "@/lib/db/query";
 
 export const revalidate = 60;
@@ -28,14 +29,16 @@ export default async function HomePage() {
   try {
     const [page, galleryImages] = await Promise.all([
       getHomepage(),
-      query<{ id: number; image_url: string; alt_text?: string; caption?: string }>(`
-        SELECT g.id, m.url as image_url, m.alt_text, g.caption
-        FROM gallery_images g
-        JOIN media m ON g.media_id = m.id
-        WHERE g.is_visible = 1
-        ORDER BY g.sort_order ASC, g.id DESC
-        LIMIT 20
-      `).catch(() => []),
+      memoize("gallery:homepage", 180, () =>
+        query<{ id: number; image_url: string; alt_text?: string; caption?: string }>(`
+          SELECT g.id, m.url as image_url, m.alt_text, g.caption
+          FROM gallery_images g
+          JOIN media m ON g.media_id = m.id
+          WHERE g.is_visible = 1
+          ORDER BY g.sort_order ASC, g.id DESC
+          LIMIT 20
+        `).catch(() => [])
+      ),
     ]);
 
     if (!page) notFound();

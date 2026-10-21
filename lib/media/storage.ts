@@ -95,10 +95,40 @@ export async function mediaFileResponse(rawPath: string[] | string | undefined) 
   });
 }
 
+const mediaMemoryCache = new Map<string, { mimeType: string; data: Buffer }>();
+const MAX_MEDIA_CACHE = 200;
+
+function setMediaCache(key: string, value: { mimeType: string; data: Buffer }) {
+  if (mediaMemoryCache.size >= MAX_MEDIA_CACHE) {
+    const firstKey = mediaMemoryCache.keys().next().value;
+    if (firstKey) mediaMemoryCache.delete(firstKey);
+  }
+  mediaMemoryCache.set(key, value);
+}
+
 export async function getMediaFile(requestPath: string) {
   const relative = normalizeUploadPath(requestPath);
   const filename = relative.split("/").pop() || relative;
 
+  // 1. Check in-memory cache (0ms)
+  const cached = mediaMemoryCache.get(relative);
+  if (cached) return cached;
+
+  // 2. Check local disk first before hitting remote DB
+  const diskPath = path.resolve(process.cwd(), "public", relative);
+  const root = path.resolve(process.cwd(), "public", "uploads");
+  if (diskPath.startsWith(root)) {
+    try {
+      const data = await readFile(diskPath);
+      const result = { mimeType: guessMime(diskPath), data };
+      setMediaCache(relative, result);
+      return result;
+    } catch {
+      // File not yet on disk, proceed to database
+    }
+  }
+
+  // 3. Fallback to MySQL database
   try {
     const row = await queryTextOne<{ mime_type: string; file_data: unknown; path: string }>(
       `SELECT path, mime_type, file_data FROM media
@@ -108,7 +138,11 @@ export async function getMediaFile(requestPath: string) {
     );
     const fromDb = toBuffer(row?.file_data);
     if (fromDb?.length && row) {
-      return { mimeType: row.mime_type || guessMime(relative), data: fromDb };
+      const result = { mimeType: row.mime_type || guessMime(relative), data: fromDb };
+      setMediaCache(relative, result);
+      // Asynchronously cache on disk for next time
+      tryWritePublicUpload(relative, fromDb).catch(() => undefined);
+      return result;
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
@@ -118,15 +152,7 @@ export async function getMediaFile(requestPath: string) {
     console.error("[media] file_data column missing or unreadable", message);
   }
 
-  const diskPath = path.resolve(process.cwd(), "public", relative);
-  const root = path.resolve(process.cwd(), "public", "uploads");
-  if (!diskPath.startsWith(root)) return null;
-  try {
-    const data = await readFile(diskPath);
-    return { mimeType: guessMime(diskPath), data };
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 function guessMime(filePath: string) {
